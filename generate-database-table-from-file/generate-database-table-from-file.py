@@ -30,18 +30,15 @@ def read_file(file_path):
 def infer_pg_type(value):
     """Infer PostgreSQL data type for a value."""
     if pd.isna(value) or (isinstance(value, str) and value.strip() == ''):
-        # Si el valor es nulo o una cadena vacía, lo ignoramos
         return None
 
     value_str = str(value)
     
-    # Regla para cadenas no numéricas
     if value_str.startswith('0') or (
         len(value_str) >= 8 and not re.match(r'^\d{4}-\d{2}-\d{2}', value_str)
     ):
         return 'TEXT'
 
-    # Intentar inferir un número
     try:
         numeric_value = float(value_str.strip())
         if '.' in value_str or 'e' in value_str.lower():
@@ -52,7 +49,6 @@ def infer_pg_type(value):
     except (ValueError, AttributeError):
         pass
 
-    # Intentar inferir una fecha
     try:
         parsed_date = parse_datetime(value_str, fuzzy=False)
         if 1900 <= parsed_date.year <= 2100:
@@ -60,7 +56,6 @@ def infer_pg_type(value):
     except (ValueError, TypeError):
         pass
 
-    # Si no es ningún tipo reconocido, devolver 'TEXT'
     return 'TEXT'
 
 
@@ -70,20 +65,16 @@ def infer_column_type(series):
     sample_size = min(500, len(sample))
     sample = sample.sample(n=sample_size, random_state=42)
 
-    # Inferir tipos excluyendo valores nulos o vacíos
     inferred_types = {infer_pg_type(value) for value in sample if infer_pg_type(value) is not None}
 
     if not inferred_types:
-        # Si no se puede inferir ningún tipo, usar 'TEXT' por defecto
         return 'TEXT'
 
-    # Prioridad de tipos para decidir el tipo final
     type_priority = ['TEXT', 'INTEGER', 'FLOAT', 'TIMESTAMP']
     for data_type in type_priority:
         if data_type in inferred_types:
             return data_type
 
-    # Como último recurso, devolver 'TEXT'
     return 'TEXT'
 
 
